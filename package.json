@@ -1,0 +1,8 @@
+{
+  "name": "smart-video-editor-mcp",
+  "version": "1.0.0",
+  "main": "mcp-server.js",
+  "scripts": {
+    "start": "node mcp-server.js"
+  }
+}
