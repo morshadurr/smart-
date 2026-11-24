@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Video Editor</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #111827;
+      color: white;
+    }
+
+    .app {
+      max-width: 1100px;
+      margin: auto;
+      padding: 20px;
+    }
+
+    h1 {
+      margin-bottom: 5px;
+    }
+
+    .subtitle {
+      color: #9ca3af;
+      margin-bottom: 20px;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    button,
+    .upload {
+      border: 0;
+      border-radius: 8px;
+      padding: 10px 16px;
+      background: #2563eb;
+      color: white;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    button:hover,
+    .upload:hover {
+      background: #1d4ed8;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .editor {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 20px;
+    }
+
+    .preview,
+    .controls {
+      background: #1f2937;
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    video {
+      width: 100%;
+      max-height: 500px;
+      background: black;
+      border-radius: 8px;
+    }
+
+    .control {
+      margin-bottom: 18px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 7px;
+      color: #d1d5db;
+    }
+
+    input[type="range"] {
+      width: 100%;
+    }
+
+    .time {
+      display: flex;
+      justify-content: space-between;
+      color: #9ca3af;
+      font-size: 13px;
+    }
+
+    .timeline {
+      margin-top: 20px;
+      background: #111827;
+      padding: 15px;
+      border-radius: 10px;
+    }
+
+    .timeline-bar {
+      height: 12px;
+      background: #374151;
+      border-radius: 10px;
+      position: relative;
+      margin-top: 10px;
+    }
+
+    .playhead {
+      position: absolute;
+      top: 0;
+      width: 4px;
+      height: 12px;
+      background: #ef4444;
+    }
+
+    .message {
+      margin-top: 15px;
+      color: #9ca3af;
+      font-size: 14px;
+    }
+
+    @media (max-width: 800px) {
+      .editor {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="app">
+
+  <h1>Smart Video Editor</h1>
+  <div class="subtitle">
+    A simple browser-based video editor
+  </div>
+
+  <div class="toolbar">
+
+    <label class="upload">
+      Upload Video
+      <input
+        type="file"
+        id="videoInput"
+        accept="video/*"
+      >
+    </label>
+
+    <button onclick="playVideo()">Play</button>
+    <button onclick="pauseVideo()">Pause</button>
+    <button onclick="restartVideo()">Restart</button>
+
+  </div>
+
+  <div class="editor">
+
+    <div class="preview">
+
+      <video
+        id="video"
+        controls
+      ></video>
+
+      <div class="timeline">
+
+        <div class="time">
+          <span id="currentTime">00:00</span>
+          <span id="duration">00:00</span>
+        </div>
+
+        <div class="timeline-bar">
+          <div
+            id="playhead"
+            class="playhead"
+            style="left: 0%"
+          ></div>
+        </div>
+
+      </div>
+
+      <div id="message" class="message">
+        Upload a video to start editing.
+      </div>
+
+    </div>
+
+    <div class="controls">
+
+      <div class="control">
+
+        <label>
+          Trim Start
+        </label>
+
+        <input
+          type="range"
+          id="startRange"
+          min="0"
+          max="100"
+          value="0"
+        >
+
+        <div id="startValue">
+          0 seconds
+        </div>
+
+      </div>
+
+      <div class="control">
+
+        <label>
+          Trim End
+        </label>
+
+        <input
+          type="range"
+          id="endRange"
+          min="0"
+          max="100"
+          value="100"
+        >
+
+        <div id="endValue">
+          0 seconds
+        </div>
+
+      </div>
+
+      <button onclick="setStart()">
+        Set Start
+      </button>
+
+      <button onclick="setEnd()">
+        Set End
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+
+const video = document.getElementById("video");
+const videoInput = document.getElementById("videoInput");
+
+const currentTimeText =
+  document.getElementById("currentTime");
+
+const durationText =
+  document.getElementById("duration");
+
+const startRange =
+  document.getElementById("startRange");
+
+const endRange =
+  document.getElementById("endRange");
+
+const startValue =
+  document.getElementById("startValue");
+
+const endValue =
+  document.getElementById("endValue");
+
+const playhead =
+  document.getElementById("playhead");
+
+const message =
+  document.getElementById("message");
+
+let videoDuration = 0;
+
+videoInput.addEventListener("change", function () {
+
+  const file = this.files[0];
+
+  if (!file) {
+    return;
+  }
+
+  const url = URL.createObjectURL(file);
+
+  video.src = url;
+
+  message.textContent =
+    "Video loaded successfully.";
+
+});
+
+video.addEventListener("loadedmetadata", function () {
+
+  videoDuration = video.duration;
+
+  durationText.textContent =
+    formatTime(videoDuration);
+
+  startRange.max = videoDuration;
+  endRange.max = videoDuration;
+
+  endRange.value = videoDuration;
+
+  startValue.textContent =
+    "0 seconds";
+
+  endValue.textContent =
+    Math.round(videoDuration) + " seconds";
+
+});
+
+video.addEventListener("timeupdate", function () {
+
+  const current = video.currentTime;
+
+  currentTimeText.textContent =
+    formatTime(current);
+
+  if (videoDuration > 0) {
+
+    const percentage =
+      (current / videoDuration) * 100;
+
+    playhead.style.left =
+      percentage + "%";
+
+  }
+
+});
+
+startRange.addEventListener("input", function () {
+
+  let value = Number(this.value);
+
+  if (value >= Number(endRange.value)) {
+
+    value =
+      Number(endRange.value) - 0.1;
+
+    this.value = value;
+
+  }
+
+  startValue.textContent =
+    value.toFixed(1) + " seconds";
+
+});
+
+endRange.addEventListener("input", function () {
+
+  let value = Number(this.value);
+
+  if (value <= Number(startRange.value)) {
+
+    value =
+      Number(startRange.value) + 0.1;
+
+    this.value = value;
+
+  }
+
+  endValue.textContent =
+    value.toFixed(1) + " seconds";
+
+});
+
+function playVideo() {
+
+  if (video.src) {
+    video.play();
+  }
+
+}
+
+function pauseVideo() {
+
+  video.pause();
+
+}
+
+function restartVideo() {
+
+  video.currentTime = 0;
+
+  video.play();
+
+}
+
+function setStart() {
+
+  if (!video.src) {
+    return;
+  }
+
+  startRange.value =
+    video.currentTime;
+
+  startValue.textContent =
+    video.currentTime.toFixed(1) +
+    " seconds";
+
+}
+
+function setEnd() {
+
+  if (!video.src) {
+    return;
+  }
+
+  endRange.value =
+    video.currentTime;
+
+  endValue.textContent =
+    video.currentTime.toFixed(1) +
+    " seconds";
+
+}
+
+function formatTime(seconds) {
+
+  if (!seconds || isNaN(seconds)) {
+    return "00:00";
+  }
+
+  const minutes =
+    Math.floor(seconds / 60);
+
+  const secs =
+    Math.floor(seconds % 60);
+
+  return (
+    String(minutes).padStart(2, "0")
+    +
+    ":"
+    +
+    String(secs).padStart(2, "0")
+  );
+
+}
+
+</script>
+
+</body>
+</html>
