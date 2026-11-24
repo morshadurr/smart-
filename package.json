@@ -4,5 +4,8 @@
   "main": "mcp-server.js",
   "scripts": {
     "start": "node mcp-server.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
   }
 }
